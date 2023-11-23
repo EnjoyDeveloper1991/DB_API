@@ -37,9 +37,9 @@ def GetUserLoginCheck(id: str, pwd: str):
         result_json = DBConnect.GetUserLoginCheck(conn, id, pwd)
     return result_json
 
-@api.get("/GetUserInfo")
-def GetUserInfo(id: str):
+@api.get('/GetBookSearch')
+def GetBookSearch(book_name: str):
     conn = DBConnect.DBConnect()
     if conn:
-        result_json = DBConnect.SelectUserInfo(conn, id)
+        result_json = DBConnect.GetBookSearch(conn, book_name)
     return result_json

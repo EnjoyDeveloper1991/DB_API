@@ -29,103 +29,80 @@ def DBClose(conn):
     except Exception as e:
         print(f"MSSQL 연결을 종료하던 중 오류가 발생했습니다. {str(e)}")
         return None
-
+    
 ## User 로그인 확인
 def GetUserLoginCheck(conn, u_id, u_pwd):
-    query = 'SELECT COUNT(*) AS CNT FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
+    query = 'SELECT * FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
     try:
-        # 딕셔너리로 결과 반환하는 커서 생성
         cursor = conn.cursor(as_dict=True)
         cursor.execute(query, (u_id, u_pwd))
-        row = cursor.fetchone()
-        count_value = row['CNT']
-        if count_value == 1:
+        user_data = cursor.fetchone()
+
+        if user_data:
             data = {
-                "login_yn":"y",
-                "message":"로그인 성공"
+                "login_yn": "y",
+                "message": "로그인 성공",
+                "user_info": user_data  # 로그인한 사용자의 모든 정보
             }
-            print(data)
+            user_data['u_name'] = user_data['u_name'].encode('ISO-8859-1').decode('euc-kr')
+            user_data['u_nicname'] = user_data['u_nicname'].encode('ISO-8859-1').decode('euc-kr')
+            user_data['u_time'] = user_data['u_time'].strftime('%Y-%m-%d %H:%M:%S')
         else:
             data = {
-                "login_yn":"n",
-                "message":"실패 : 아이디가 존재하지 않거나 비밀번호가 일치하지 않습니다."
+                "login_yn": "n",
+                "message": "실패 : 아이디가 존재하지 않거나 비밀번호가 일치하지 않습니다.",
+                "user_info": None  # 로그인 실패 시 정보 없음
             }
         return data
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
-    
-    
-    # def UserLoginCheck(conn, u_id, u_pwd):
-    # query = 'SELECT * FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
-    # try:
-    #     cursor = conn.cursor(as_dict=True)
-    #     cursor.execute(query, (u_id, u_pwd))
-    #     user_data = cursor.fetchone()
-
-    #     if user_data:
-    #         data = {
-    #             "login_yn": "y",
-    #             "message": "로그인 성공",
-    #             "user_info": user_data  # 로그인한 사용자의 모든 정보
-    #         }
-    #     else:
-    #         data = {
-    #             "login_yn": "n",
-    #             "message": "실패 : 아이디가 존재하지 않거나 비밀번호가 일치하지 않습니다.",
-    #             "user_info": None  # 로그인 실패 시 정보 없음
-    #         }
         
-    #     # 딕셔너리를 JSON 형식으로 변환
-    #     json_data = json.dumps(data)
-    #     return json_data
-    # except Exception as e:
-    #     print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
-    #     return None
     
-    
-def BookSearch(conn, partial_item):
-    partial_item = '%' + partial_item + '%'  # 부분 일치하는 문자열을 만듦
-    query = """
-    SELECT bi.b_id, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img, pi.p_name as preference_name
+def GetBookSearch(conn, book_name):
+    book_name = '%' + book_name + '%'  # 부분 일치하는 문자열을 만듦
+    query = f'''SELECT bi.b_id, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img, pi.p_name
     FROM BOOK_INFO bi
     LEFT JOIN BOOK_PREFERENCE bp ON bi.b_id = bp.b_id
     LEFT JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id
     WHERE bi.b_name LIKE %s
-    """
+    '''
     try:
         cursor = conn.cursor(as_dict=True)
-        cursor.execute(query, (partial_item,))
+        cursor.execute(query, (book_name,))
         rows = cursor.fetchall()
-
+        
         if rows:  # 책 정보가 있다면
             books = []
             for row in rows:
                 book = {
-                    "book_id": row['b_id'],
-                    "book_name": row['b_name'],
-                    "book_author": row['b_aut'],
-                    "book_description": row['b_ps'],
-                    "book_date": row['b_date'],
-                    "book_short": row['b_short'],
-                    "book_detail": row['b_detail'],
-                    "book_image": row['b_img'],
-                    "preference_name": row['preference_name']
+                    "b_id": row['b_id'],
+                    "b_name": row['b_name'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_aut": row['b_aut'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_ps": row['b_ps'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_date": row['b_date'],
+                    "b_short": row['b_short'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_detail": row['b_detail'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_img": row['b_img'].encode('ISO-8859-1').decode('euc-kr'),
+                    "p_name": row['p_name'].encode('ISO-8859-1').decode('euc-kr')
                 }
                 books.append(book)
-            json_data = json.dumps(books)  # 책 정보들을 리스트로 묶어 JSON 형식으로 변환
-            print(json_data)  # 책 정보 JSON 문자열 출력
+            return books
+            #json_data = json.dumps(books)               # 책 정보들을 리스트로 묶어 JSON 형식으로 변환
+            #print(json_data)  # 책 정보 JSON 문자열 출력
         else:  # 책 정보가 없다면
             data = {
                 "message": "책 정보를 찾을 수 없습니다."
             }
-            json_data = json.dumps(data)
-            print(json_data)
-        return json_data
+            print(data)
+            #return data
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
 
+
+
+"""
 def AddtoBookmark(conn, user_id, book_id):
     try:
         # 현재 날짜와 시간 정보 가져오기
@@ -142,7 +119,7 @@ def AddtoBookmark(conn, user_id, book_id):
         print(f"Error adding to bookmark: {str(e)}")
         conn.rollback()  # 롤백하여 이전 상태로 복구
         return False  # 등록 실패를 나타내는 값 반환
-
+"""
 def GetUserBookmarksWithPreferences(conn, user_id):
     try:
         query = """
@@ -396,12 +373,37 @@ def DBSelect(sql):
         print(row['u_id'], row['u_name'].encode('ISO-8859-1').decode('euc-kr'))
         row = cursor.fetchone()
 
+"""
+def GetUserLoginCheck(conn, u_id, u_pwd):
+    query = 'SELECT COUNT(*) AS CNT FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
+    try:
+        # 딕셔너리로 결과 반환하는 커서 생성
+        cursor = conn.cursor(as_dict=True)
+        cursor.execute(query, (u_id, u_pwd))
+        row = cursor.fetchone()
+        count_value = row['CNT']
+        if count_value == 1:
+            data = {
+                "login_yn":"y",
+                "message":"로그인 성공"
+            }
+            print(data)
+        else:
+            data = {
+                "login_yn":"n",
+                "message":"실패 : 아이디가 존재하지 않거나 비밀번호가 일치하지 않습니다."
+            }
+        return data
+    except Exception as e:
+        print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
+        return None
 #print(UserLoginCheck('', '1', '비밀번호'))
 #UserLoginCheck('', '1', ' 비밀번호')
 #SelectUserInfo('','','','','','','','')
 #DBConnect(server, username, password, database)
 #DBSelect(sql)
 #DBClose()
+"""
 """
 #############################################################################
 # INSERT
