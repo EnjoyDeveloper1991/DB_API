@@ -45,7 +45,6 @@ def random_char():
 @api.get('/GetUserLoginCheck')
 def GetUserLoginCheck(id: str, pwd: str):
     conn = DBConnect.DBConnect()
-    print(id, pwd)
     if conn:
         result_json = DBConnect.GetUserLoginCheck(conn, id, pwd)
     return result_json
@@ -54,14 +53,39 @@ def GetUserLoginCheck(id: str, pwd: str):
 @api.get('/GetBookSearch')
 def GetBookSearch(book_name: str):
     conn = DBConnect.DBConnect()
-    print(book_name)
     if conn:
         result_json = DBConnect.GetBookSearch(conn, book_name)
     return result_json
 
+## 취향명으로 취향리스트 추출 ##
+@api.get('/GetPreferencesNameList')
+def GetPreferencesNameList(preference_name: str, like_option: bool):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.GetPreferencesNameList(conn, preference_name, like_option)
+    return result_json
+
+## 사용자 취향목록 추출 ##
+@api.get('/GetUserPreferenceList')
+def GetUserPreferenceList(user_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.GetUserPreferenceList(conn, user_id)
+    return result_json
 
 
 
+## 사용자 취향 생성 (Insert) ##
+@api.get('/PostUserPreferences')
+def PostUserPreferences(user_id: str, preference_ids: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.PostUserPreferences(conn, user_id, preference_ids)
+    return result_json
+
+
+
+"""
 ## User 취향정보 입력(Insert)
 @api.post("/PostUserPreferences")
 def PostUserPreferences(id: str, preference_ids: str):
@@ -69,3 +93,4 @@ def PostUserPreferences(id: str, preference_ids: str):
         if conn:
             result_json = DBConnect.PostUserPreferences(conn, id, preference_ids)
         return result_json
+"""

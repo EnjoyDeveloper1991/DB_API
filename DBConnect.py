@@ -95,18 +95,22 @@ def GetBookSearch(conn, book_name):
             data = {
                 "message": "책 정보를 찾을 수 없습니다."
             }
-            print(data)
-            #return data
+            return data
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
 
-## 취향리스트 추출 ##
-def GetPreferencesList(conn):
-    query = "SELECT * FROM PREFERENCE_INFO"
+## 취향명으로 취향목록 추출 ##
+def GetPreferencesNameList(conn, preference_name, like_option):
+    if like_option == True:
+        preference_name = '%' + preference_name + '%'  # 부분 일치하는 문자열을 만듬
+        query = f"SELECT * FROM PREFERENCE_INFO WHERE p_name LIKE %s"
+    else:
+        query = f"SELECT * FROM PREFERENCE_INFO WHERE p_name = %s"
+
     try:
         cursor = conn.cursor(as_dict=True)
-        cursor.execute(query)
+        cursor.execute(query, (preference_name,))
         rows = cursor.fetchall()
         
         if rows:  # 취향정보가 있다면
@@ -122,36 +126,64 @@ def GetPreferencesList(conn):
             data = {
                 "message": "취향정보가 존재하지 않습니다."
             }
-            print(data)
-            #return data
+            return data
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
 
+## 사용자 취향목록 추출 ##
+def GetUserPreferenceList(conn, user_id):
+    if user_id == "":
+        data = {
+            "message": "사용자ID가 입력되지 않았습니다."
+        }
+        return data
+    else:
+        query = f"SELECT pi.p_id, pi.p_name FROM USER_PREFERENCE as up, PREFERENCE_INFO as pi WHERE up.u_id = %s And up.p_id = pi.p_id"
+        try:
+            cursor = conn.cursor(as_dict=True)
+            cursor.execute(query, (user_id,))
+            rows = cursor.fetchall()
+            user_preferences = []
 
-
-
-
-
-
-
-
-
-
+            if rows:  # 사용자 취향정보가 존재하면?
+                for row in rows:
+                    user_preference = {
+                        "p_id": row['p_id'],
+                        "p_name": row['p_name'].encode('ISO-8859-1').decode('cp949')
+                    }
+                    user_preferences.append(user_preference)
+            return user_preferences
+        except Exception as e:
+            print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
+            return None
 
 ## 사용자 취향 생성 (Insert) ##
 def PostUserPreferences(conn, user_id, preference_ids):
     try:
-        query = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
-        cursor = conn.cursor()
-        for preference_id in preference_ids:
+        for preference_id in preference_ids.split(','):
+            query = f"INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
+            cursor = conn.cursor()
             cursor.execute(query, (user_id, preference_id))
         conn.commit()
-        return True  # 등록 성공을 나타내는 값 반환
+        data = {
+                "message": "취향 입력 성공"
+        }
+        return data
     except Exception as e:
         print(f"Error adding user preferences: {str(e)}")
         conn.rollback()  # 롤백하여 이전 상태로 복구
-        return False  # 등록 실패를 나타내는 값 반환
+        data = {
+            "message": "취향 입력 중 오류 발생"
+        }
+        return data
+
+
+
+
+
+
+
 
 
 

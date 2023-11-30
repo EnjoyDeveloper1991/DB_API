@@ -45,3 +45,52 @@
             ]
         }
     ]
+
+▶ Preference
+1. 취향명으로 취향리스트 추출 => like_option : True(LIKE문으로 검색), False(일치하는 것 검색)
+    http://localhost:8000/GetPreferencesNameList?preference_name=&like_option=True      => 전체검색
+    http://localhost:8000/GetPreferencesNameList?preference_name=행복&like_option=True  => '행복'을 검색하는데, Like로 검색
+    http://localhost:8000/GetPreferencesNameList?preference_name=행복&like_option=False => '행복'을 검색하는데, =로 검색
+    [
+        {
+            "p_id":200,
+            "p_name":"결국 행복"
+        },
+        {
+            "p_id":2358,
+            "p_name":"사람 행복"
+        },
+        {
+            "p_id":5759,
+            "p_name":"행복"
+        }
+    ]
+
+2. 사용자 취향목록 추출
+    http://localhost:8000/GetUserPreferenceList?user_id=admin
+    [
+        {
+            "p_id":1,
+            "p_name":"가게"
+        },
+        {
+            "p_id":2,
+            "p_name":"가격"
+        },
+        {
+            "p_id":3,
+            "p_name":"가격 상승"
+        },
+        {
+            "p_id":4,
+            "p_name":"가계부"
+        },
+        {   "p_id":5,
+            "p_name":"가나다"
+        }
+    ]
+3. 사용자 취향 생성 (Insert)
+    http://localhost:8000/PostUserPreferences?user_id=admin&preference_ids=2,3,4,5
+    {
+        "message":"취향 입력 성공"
+    }
