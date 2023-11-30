@@ -1,8 +1,19 @@
 from fastapi import FastAPI
 import random
+import uvicorn
 import DBConnect
 
+"""
+    Get     : 데이터 가져오기
+    Post    : 데이터 생성
+    Put     : 데이터 업데이트
+    Delete  : 데이터 삭제
+"""
 api = FastAPI()
+
+# FastAPI 서버 실행
+if __name__ == "__main__":
+    uvicorn.run("db_api:api", host="0.0.0.0", port=8000, reload=True)
 
 @api.get('/random_number')
 def random_no():
@@ -29,6 +40,8 @@ def random_char():
 
     return json_object
 
+
+## 로그인 및 계정정보 추출 ##
 @api.get('/GetUserLoginCheck')
 def GetUserLoginCheck(id: str, pwd: str):
     conn = DBConnect.DBConnect()
@@ -37,9 +50,22 @@ def GetUserLoginCheck(id: str, pwd: str):
         result_json = DBConnect.GetUserLoginCheck(conn, id, pwd)
     return result_json
 
+## 도서명으로 도서 검색 (취향을 포함하여 반환) ##
 @api.get('/GetBookSearch')
 def GetBookSearch(book_name: str):
     conn = DBConnect.DBConnect()
+    print(book_name)
     if conn:
         result_json = DBConnect.GetBookSearch(conn, book_name)
     return result_json
+
+
+
+
+## User 취향정보 입력(Insert)
+@api.post("/PostUserPreferences")
+def PostUserPreferences(id: str, preference_ids: str):
+        conn = DBConnect.DBConnect()
+        if conn:
+            result_json = DBConnect.PostUserPreferences(conn, id, preference_ids)
+        return result_json

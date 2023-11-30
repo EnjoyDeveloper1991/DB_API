@@ -3,6 +3,7 @@ import json
 import random
 
 #     print(row[0], row[1].encode('ISO-8859-1').decode('euc-kr'))
+#     print(row[0], row[1].encode('ISO-8859-1').decode('cp949'))
 
 ## fetchall과 fetchone의 차이
 ## fetchall : 모든 행을 한번에 가져옴
@@ -10,11 +11,13 @@ import random
 
 ## MSSQL 접속
 def DBConnect():
-    server = '172.16.104.69:1433'
+    server = '172.16.104.69:1433'   # 김진영 부천대 Local
+    #server = '192.168.45.216:1433' # 김진영 HOME Local
     #server = '222.108.212.104:1433'
     database = 'dnb'
     username = 'sa'
     password = '1234'
+    charset = 'utf8'
     try:
         conn = pymssql.connect(server, username, password, database)
         return conn
@@ -30,7 +33,7 @@ def DBClose(conn):
         print(f"MSSQL 연결을 종료하던 중 오류가 발생했습니다. {str(e)}")
         return None
     
-## User 로그인 확인
+## 로그인 및 계정정보 추출 ##
 def GetUserLoginCheck(conn, u_id, u_pwd):
     query = 'SELECT * FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
     try:
@@ -44,8 +47,9 @@ def GetUserLoginCheck(conn, u_id, u_pwd):
                 "message": "로그인 성공",
                 "user_info": user_data  # 로그인한 사용자의 모든 정보
             }
-            user_data['u_name'] = user_data['u_name'].encode('ISO-8859-1').decode('euc-kr')
-            user_data['u_nicname'] = user_data['u_nicname'].encode('ISO-8859-1').decode('euc-kr')
+            user_data.pop('u_pwd')
+            user_data['u_name'] = user_data['u_name'].encode('ISO-8859-1').decode('cp949')
+            user_data['u_nicname'] = user_data['u_nicname'].encode('ISO-8859-1').decode('cp949')
             user_data['u_time'] = user_data['u_time'].strftime('%Y-%m-%d %H:%M:%S')
         else:
             data = {
@@ -56,37 +60,42 @@ def GetUserLoginCheck(conn, u_id, u_pwd):
         return data
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
-        return None
-        
-    
+        return "" #None
+
+## 도서명으로 도서 검색 (취향을 포함하여 반환) ##
 def GetBookSearch(conn, book_name):
-    book_name = '%' + book_name + '%'  # 부분 일치하는 문자열을 만듦
-    query = f'''SELECT bi.b_id, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img, pi.p_name
-    FROM BOOK_INFO bi
-    LEFT JOIN BOOK_PREFERENCE bp ON bi.b_id = bp.b_id
-    LEFT JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id
-    WHERE bi.b_name LIKE %s
-    '''
+    book_name = '%' + book_name + '%'  # 부분 일치하는 문자열을 만듬
+    query = f'''SELECT b_id, b_name, b_aut, b_ps, b_date, b_short, b_detail, b_img,
+		        ISNULL(STUFF((SELECT ',' + pi.p_name FROM BOOK_PREFERENCE bp JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id WHERE bi.b_id = bp.b_id FOR XML PATH('')), 1, 2, ''), '') AS p_names
+                FROM BOOK_INFO bi
+                WHERE b_name LIKE %s
+            '''
     try:
         cursor = conn.cursor(as_dict=True)
         cursor.execute(query, (book_name,))
         rows = cursor.fetchall()
-        
+        b = 1
         if rows:  # 책 정보가 있다면
             books = []
             for row in rows:
+                print(type(row['b_detail']))
+                print(row['b_detail'])
+                print(row['b_detail'].encode('ISO-8859-1'))
+                print(row['b_detail'].encode('ISO-8859-1').decode('cp949'))
+                """
                 book = {
                     "b_id": row['b_id'],
-                    "b_name": row['b_name'].encode('ISO-8859-1').decode('euc-kr'),
-                    "b_aut": row['b_aut'].encode('ISO-8859-1').decode('euc-kr'),
-                    "b_ps": row['b_ps'].encode('ISO-8859-1').decode('euc-kr'),
+                    "b_name": row['b_name'].encode('ISO-8859-1').decode('cp949'),
+                    "b_aut": row['b_aut'].encode('ISO-8859-1').decode('cp949'),
+                    "b_ps": row['b_ps'].encode('ISO-8859-1').decode('cp949'),
                     "b_date": row['b_date'],
-                    "b_short": row['b_short'].encode('ISO-8859-1').decode('euc-kr'),
-                    "b_detail": row['b_detail'].encode('ISO-8859-1').decode('euc-kr'),
-                    "b_img": row['b_img'].encode('ISO-8859-1').decode('euc-kr'),
-                    "p_name": row['p_name'].encode('ISO-8859-1').decode('euc-kr')
+                    "b_short": row['b_short'].encode('ISO-8859-1').decode('cp949'),
+                    "b_detail": row['b_detail'].encode('ISO-8859-1').decode('cp949'),
+                    "b_img": row['b_img'].encode('ISO-8859-1').decode('cp949'),
+                    "p_names": list(row['p_names'].split(','))
                 }
                 books.append(book)
+                """
             return books
             #json_data = json.dumps(books)               # 책 정보들을 리스트로 묶어 JSON 형식으로 변환
             #print(json_data)  # 책 정보 JSON 문자열 출력
@@ -99,6 +108,59 @@ def GetBookSearch(conn, book_name):
     except Exception as e:
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
+
+## 취향리스트 추출 ##
+def GetPreferencesList(conn):
+    query = "SELECT * FROM PREFERENCE_INFO"
+    try:
+        cursor = conn.cursor(as_dict=True)
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        if rows:  # 취향정보가 있다면
+            preferences = []
+            for row in rows:
+                preference = {
+                    "p_id": row['p_id'],
+                    "p_name": row['p_name'].encode('ISO-8859-1').decode('cp949')
+                }
+                preferences.append(preference)
+            return preferences
+        else:  # 취향정보가 없다면
+            data = {
+                "message": "취향정보가 존재하지 않습니다."
+            }
+            print(data)
+            #return data
+    except Exception as e:
+        print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
+        return None
+
+
+
+
+
+
+
+
+
+
+
+
+## 사용자 취향 생성 (Insert) ##
+def PostUserPreferences(conn, user_id, preference_ids):
+    try:
+        query = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
+        cursor = conn.cursor()
+        for preference_id in preference_ids:
+            cursor.execute(query, (user_id, preference_id))
+        conn.commit()
+        return True  # 등록 성공을 나타내는 값 반환
+    except Exception as e:
+        print(f"Error adding user preferences: {str(e)}")
+        conn.rollback()  # 롤백하여 이전 상태로 복구
+        return False  # 등록 실패를 나타내는 값 반환
+
 
 
 
@@ -174,19 +236,6 @@ def RemoveFromBookmark(conn, user_id, book_id):
         print(f"Error removing from bookmark: {str(e)}")
         conn.rollback()  # 롤백하여 이전 상태로 복구
         return False  # 삭제 실패를 나타내는 값 반환
-
-def AddUserPreferences(conn, user_id, preference_ids):
-    try:
-        query = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
-        cursor = conn.cursor()
-        for preference_id in preference_ids:
-            cursor.execute(query, (user_id, preference_id))
-        conn.commit()
-        return True  # 등록 성공을 나타내는 값 반환
-    except Exception as e:
-        print(f"Error adding user preferences: {str(e)}")
-        conn.rollback()  # 롤백하여 이전 상태로 복구
-        return False  # 등록 실패를 나타내는 값 반환
 
 def RecommendBooksWithPreferences(conn, user_id):
     try:
@@ -352,9 +401,9 @@ def SelectUserInfo(conn, u_id):
     row = cursor.fetchone()
     while row:
         u_id = row['u_id']
-        u_pwd = row['u_pwd'].encode('ISO-8859-1').decode('euc-kr')
-        u_name = row['u_name'].encode('ISO-8859-1').decode('euc-kr')
-        u_nicname = row['u_nicname'].encode('ISO-8859-1').decode('euc-kr')
+        u_pwd = row['u_pwd'].encode('ISO-8859-1').decode('cp949')
+        u_name = row['u_name'].encode('ISO-8859-1').decode('cp949')
+        u_nicname = row['u_nicname'].encode('ISO-8859-1').decode('cp949')
         u_division = row['u_division']
         u_gender = row['u_gender']
         u_age = row['u_age']
@@ -370,7 +419,7 @@ def DBSelect(sql):
     cursor.execute(sql)
     row = cursor.fetchone()
     while row:
-        print(row['u_id'], row['u_name'].encode('ISO-8859-1').decode('euc-kr'))
+        print(row['u_id'], row['u_name'].encode('ISO-8859-1').decode('cp949'))
         row = cursor.fetchone()
 
 """
