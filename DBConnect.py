@@ -78,11 +78,6 @@ def GetBookSearch(conn, book_name):
         if rows:  # 책 정보가 있다면
             books = []
             for row in rows:
-                print(type(row['b_detail']))
-                print(row['b_detail'])
-                print(row['b_detail'].encode('ISO-8859-1'))
-                print(row['b_detail'].encode('ISO-8859-1').decode('cp949'))
-                """
                 book = {
                     "b_id": row['b_id'],
                     "b_name": row['b_name'].encode('ISO-8859-1').decode('cp949'),
@@ -95,10 +90,7 @@ def GetBookSearch(conn, book_name):
                     "p_names": list(row['p_names'].split(','))
                 }
                 books.append(book)
-                """
             return books
-            #json_data = json.dumps(books)               # 책 정보들을 리스트로 묶어 JSON 형식으로 변환
-            #print(json_data)  # 책 정보 JSON 문자열 출력
         else:  # 책 정보가 없다면
             data = {
                 "message": "책 정보를 찾을 수 없습니다."
