@@ -14,6 +14,7 @@ def DBConnect():
     server = '172.16.104.69:1433'   # 김진영 부천대 Local
     #server = '192.168.45.216:1433' # 김진영 HOME Local
     #server = '222.108.212.104:1433'
+    server = '172.16.114.196:1433' # 이세호 부천대 Local
     database = 'dnb'
     username = 'sa'
     password = '1234'
@@ -179,6 +180,41 @@ def PostUserPreferences(conn, user_id, preference_ids):
         return data
 
 
+## 책의 취향정보를 가져와서, 사용자 취향 정보에 추가
+def AddBookToUserPreferences(conn, user_id, book_id):
+    try:
+        # 해당 책의 취향 정보 가져오기
+        query_book_pref = "SELECT p_id FROM BOOK_PREFERENCE WHERE b_id = %s"
+        cursor = conn.cursor()
+        cursor.execute(query_book_pref, (book_id,))
+        book_preferences = cursor.fetchall()
+
+        if book_preferences:
+            # 사용자의 취향 정보에 추가할 취향 정보 찾기
+            user_preferences = []
+            for pref in book_preferences:
+                query_user_pref = "SELECT p_id FROM USER_PREFERENCE WHERE u_id = %s AND p_id = %s"
+                cursor.execute(query_user_pref, (user_id, pref[0]))
+                user_pref_exists = cursor.fetchone()
+                if not user_pref_exists:
+                    user_preferences.append((user_id, pref[0]))
+
+            # 사용자의 취향 정보에 추가하기
+            if user_preferences:
+                query_insert_user_pref = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
+                cursor.executemany(query_insert_user_pref, user_preferences)
+                conn.commit()
+                return True  # 취향 정보 추가 성공
+            else:
+                return False  # 사용자의 취향 정보에 추가할 새로운 정보 없음
+        else:
+            return False  # 해당 책의 취향 정보가 없음
+
+    except Exception as e:
+        print(f"Error adding book preferences to user: {str(e)}")
+        conn.rollback()
+        return False  # 취향 정보 추가 실패
+
 
 
 
@@ -323,41 +359,6 @@ def RecommendBooksWithPreferences(conn, user_id):
     except Exception as e:
         print(f"Error recommending books with preferences: {str(e)}")
         return None
-
-
-def AddBookToUserPreferences(conn, user_id, book_id):
-    try:
-        # 해당 책의 취향 정보 가져오기
-        query_book_pref = "SELECT p_id FROM BOOK_PREFERENCE WHERE b_id = %s"
-        cursor = conn.cursor()
-        cursor.execute(query_book_pref, (book_id,))
-        book_preferences = cursor.fetchall()
-
-        if book_preferences:
-            # 사용자의 취향 정보에 추가할 취향 정보 찾기
-            user_preferences = []
-            for pref in book_preferences:
-                query_user_pref = "SELECT p_id FROM USER_PREFERENCE WHERE u_id = %s AND p_id = %s"
-                cursor.execute(query_user_pref, (user_id, pref[0]))
-                user_pref_exists = cursor.fetchone()
-                if not user_pref_exists:
-                    user_preferences.append((user_id, pref[0]))
-
-            # 사용자의 취향 정보에 추가하기
-            if user_preferences:
-                query_insert_user_pref = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
-                cursor.executemany(query_insert_user_pref, user_preferences)
-                conn.commit()
-                return True  # 취향 정보 추가 성공
-            else:
-                return False  # 사용자의 취향 정보에 추가할 새로운 정보 없음
-        else:
-            return False  # 해당 책의 취향 정보가 없음
-
-    except Exception as e:
-        print(f"Error adding book preferences to user: {str(e)}")
-        conn.rollback()
-        return False  # 취향 정보 추가 실패
 
 
 def AddBookToUserBookmark(conn, user_id, book_id):

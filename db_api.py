@@ -73,8 +73,6 @@ def GetUserPreferenceList(user_id: str):
         result_json = DBConnect.GetUserPreferenceList(conn, user_id)
     return result_json
 
-
-
 ## 사용자 취향 생성 (Insert) ##
 @api.get('/PostUserPreferences')
 def PostUserPreferences(user_id: str, preference_ids: str):
@@ -84,6 +82,13 @@ def PostUserPreferences(user_id: str, preference_ids: str):
     return result_json
 
 
+
+@api.get('/AddBookToUserPreferences')
+def AddBookToUserPreferences(user_id: str, book_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.AddBookToUserPreferences(conn, user_id, book_id)
+    return result_json
 
 """
 ## User 취향정보 입력(Insert)
