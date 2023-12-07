@@ -17,13 +17,15 @@ import random
 
 ## MSSQL 접속
 def DBConnect():
-    server = '172.16.104.69:1433'   # 김진영 부천대 Local
-    #server = '192.168.45.216:1433' # 김진영 HOME Local
+    server = '172.16.104.69:1433'       # 김진영 부천대 Local
+    #server = '192.168.45.216:1433'     # 김진영 HOME Local
     #server = '222.108.212.104:1433'
-    #server = '172.16.114.196:1433' # 이세호 부천대 Local
+    #server = '172.16.114.196:1433'     # 이세호 부천대 Local
+    #server = '192.168.219.104:1433'    # 도성대 HOME Local
     database = 'dnb'
     username = 'sa'
-    password = '1234'
+    password = '1234'                   # 김진영 HOME
+    #password = 'Qwer1234'              # 도성대 HOME
     charset = 'utf8'
     try:
         conn = pymssql.connect(server, username, password, database)
@@ -360,6 +362,9 @@ def GetUserBookmarkList(conn, user_id):
         except Exception as e:
             print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
             return None
+
+
+
 
 
 
