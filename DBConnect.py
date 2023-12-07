@@ -362,51 +362,10 @@ def GetUserBookmarkList(conn, user_id):
             return None
 
 
-# DELETE
-# POST
 
-def GetUserBookmarksWithPreferences(conn, user_id):
-    try:
-        query = """
-        SELECT bi.b_id, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img, pi.p_name as preference_name
-        FROM BOOKMARK bm
-        INNER JOIN BOOK_INFO bi ON bm.b_id = bi.b_id
-        LEFT JOIN BOOK_PREFERENCE bp ON bi.b_id = bp.b_id
-        LEFT JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id
-        WHERE bm.u_id = %s
-        """
-        cursor = conn.cursor(as_dict=True)
-        cursor.execute(query, (user_id,))
-        rows = cursor.fetchall()
 
-        if rows:  # 즐겨찾기 정보가 있다면
-            bookmarks = []
-            for row in rows:
-                bookmark = {
-                    "book_id": row['b_id'],
-                    "book_name": row['b_name'],
-                    "book_author": row['b_aut'],
-                    "book_description": row['b_ps'],
-                    "book_date": row['b_date'],
-                    "book_short": row['b_short'],
-                    "book_detail": row['b_detail'],
-                    "book_image": row['b_img'],
-                    "preference_name": row['preference_name']
-                }
-                bookmarks.append(bookmark)
-            json_data = json.dumps(bookmarks)  # 책 정보들을 리스트로 묶어 JSON 형식으로 변환
-            print(json_data)  # 책 정보 JSON 문자열 출력
-        else:  # 즐겨찾기 정보가 없다면
-            data = {
-                "message": "즐겨찾기 정보가 없습니다."
-            }
-            json_data = json.dumps(data)
-            print(json_data)
-        return json_data
-    except Exception as e:
-        print(f"Error getting user bookmarks with preferences: {str(e)}")
-        return None
 
+###################
 def RecommendBooksWithPreferences(conn, user_id):
     try:
         query = """
@@ -516,62 +475,3 @@ def AddBookToUserBookmark(conn, user_id, book_id):
         print(f"Error adding book to user bookmark and preferences: {str(e)}")
         conn.rollback()
         return False  # 즐겨찾기 및 취향 정보 추가 실패
-
-"""
-def execute_query1(conn):
-    query = "SELECT * FROM table1"
-    try:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        result = cursor.fetchall()
-        return result
-    except Exception as e:
-        print(f"Error executing SQL query 1: {str(e)}")
-        return None
-
-## USER_INFO 가져오기
-def SelectUserInfo(conn, u_id):
-    cursor.execute('SELECT * FROM USER_INFO')
-    row = cursor.fetchone()
-    while row:
-        u_id = row['u_id']
-        u_pwd = row['u_pwd'].encode('ISO-8859-1').decode('cp949')
-        u_name = row['u_name'].encode('ISO-8859-1').decode('cp949')
-        u_nicname = row['u_nicname'].encode('ISO-8859-1').decode('cp949')
-        u_division = row['u_division']
-        u_gender = row['u_gender']
-        u_age = row['u_age']
-        u_time = row['u_time']
-        print(u_id, u_pwd, u_name, u_nicname, u_division, u_gender, u_age, u_time)
-        row = cursor.fetchone()
-
-## SELECT
-def DBSelect(sql):
-    global conn, cursor
-    cursor.execute(sql)
-    row = cursor.fetchone()
-    while row:
-        print(row['u_id'], row['u_name'].encode('ISO-8859-1').decode('cp949'))
-        row = cursor.fetchone()
-
-#############################################################################
-# INSERT
-data = 'hello World !!'
-query = "INSERT INTO POST (CONTENTS) VALUES ('" + str(data) + "')"  # 문자열은 무조건 홑따옴표
-cursor.execute(query)
-conn.commit()
-
-#############################################################################
-# UPDATE
-data = '헬로우 월드 !!'
-query = "UPDATE POST set CONTENTS = '" + str(data) + "'  where POST_NO = 11"
-cursor.execute(query)
-conn.commit()
-
-#############################################################################
-# DELETE
-data = '헬로우 월드 !!'
-query = "DELETE FROM POST WHERE CONTENTS = '" + str(data) + "'" 
-cursor.execute(query)
-conn.commit()
-"""
