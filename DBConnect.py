@@ -5,6 +5,12 @@ import random
 #     print(row[0], row[1].encode('ISO-8859-1').decode('euc-kr'))
 #     print(row[0], row[1].encode('ISO-8859-1').decode('cp949'))
 
+# GET       SELECT  데이터 가져오기
+# POST      INSERT  데이터 생성
+# PUT	    UPDATE  데이터 업데이트
+# DELETE	DELETE  데이터 삭제
+# PATCH     UPDATE  데이터 부분 업데이트
+
 ## fetchall과 fetchone의 차이
 ## fetchall : 모든 행을 한번에 가져옴
 ## fecthone : 행을 하나씩 가져옴
@@ -14,7 +20,7 @@ def DBConnect():
     server = '172.16.104.69:1433'   # 김진영 부천대 Local
     #server = '192.168.45.216:1433' # 김진영 HOME Local
     #server = '222.108.212.104:1433'
-    server = '172.16.114.196:1433' # 이세호 부천대 Local
+    #server = '172.16.114.196:1433' # 이세호 부천대 Local
     database = 'dnb'
     username = 'sa'
     password = '1234'
@@ -162,86 +168,203 @@ def GetUserPreferenceList(conn, user_id):
 ## 사용자 취향 생성 (Insert) ##
 def PostUserPreferences(conn, user_id, preference_ids):
     try:
-        for preference_id in preference_ids.split(','):
-            query = f"INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
-            cursor = conn.cursor()
-            cursor.execute(query, (user_id, preference_id))
-        conn.commit()
-        data = {
-                "message": "취향 입력 성공"
-        }
+        if user_id == "":
+            data = {
+                "message": "사용자ID가 입력되지 않았습니다."
+            }
+        elif preference_ids == "":
+            data = {
+                "message": "취향ID가 입력되지 않았습니다. (여러 건일 경우 ,로 구분)"
+            }
+        else:
+            for preference_id in preference_ids.split(','):
+                check_query = f"SELECT * FROM USER_PREFERENCE WHERE u_id = %s AND p_id = %s"
+                cursor = conn.cursor()
+                cursor.execute(check_query, (user_id, preference_id,))
+                rows = cursor.fetchone()
+
+                if rows:  # 등록된 취향정보가 존재한다면 작업하지 않음
+                    continue
+                else: # 등록된 취향정보가 없다면 등록
+                    insert_query = f"INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
+                    cursor = conn.cursor()
+                    cursor.execute(insert_query, (user_id, preference_id,))
+            conn.commit()
+            data = {
+                "message": "Success"
+            }
         return data
     except Exception as e:
-        print(f"Error adding user preferences: {str(e)}")
         conn.rollback()  # 롤백하여 이전 상태로 복구
         data = {
             "message": "취향 입력 중 오류 발생"
         }
         return data
 
-
-## 책의 취향정보를 가져와서, 사용자 취향 정보에 추가
+## 책의 취향정보를 가져와서, 사용자 취향 정보에 추가 ##
 def AddBookToUserPreferences(conn, user_id, book_id):
     try:
         # 해당 책의 취향 정보 가져오기
-        query_book_pref = "SELECT p_id FROM BOOK_PREFERENCE WHERE b_id = %s"
+        book_query = f"SELECT p_id FROM BOOK_PREFERENCE WHERE b_id = %s"
         cursor = conn.cursor()
-        cursor.execute(query_book_pref, (book_id,))
-        book_preferences = cursor.fetchall()
+        cursor.execute(book_query, (book_id,))
+        book_preferences_rows = cursor.fetchall()
 
-        if book_preferences:
+        if book_preferences_rows:
             # 사용자의 취향 정보에 추가할 취향 정보 찾기
             user_preferences = []
-            for pref in book_preferences:
-                query_user_pref = "SELECT p_id FROM USER_PREFERENCE WHERE u_id = %s AND p_id = %s"
-                cursor.execute(query_user_pref, (user_id, pref[0]))
+            for pref in book_preferences_rows:
+                user_pref_query = f"SELECT p_id FROM USER_PREFERENCE WHERE u_id = %s AND p_id = %s"
+                cursor.execute(user_pref_query, (user_id, pref[0],))
                 user_pref_exists = cursor.fetchone()
                 if not user_pref_exists:
-                    user_preferences.append((user_id, pref[0]))
+                    print(pref[0])
+                    user_preferences.append((user_id, pref[0],))
 
             # 사용자의 취향 정보에 추가하기
             if user_preferences:
-                query_insert_user_pref = "INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
-                cursor.executemany(query_insert_user_pref, user_preferences)
+                insert_user_pref_query = f"INSERT INTO USER_PREFERENCE (u_id, p_id) VALUES (%s, %s)"
+                cursor.executemany(insert_user_pref_query, user_preferences)
                 conn.commit()
-                return True  # 취향 정보 추가 성공
+                data = {
+                    "message": "Success"
+                }
+                return data
             else:
-                return False  # 사용자의 취향 정보에 추가할 새로운 정보 없음
+                data = {
+                    "message": "사용자의 취향 정보에 추가할 새로운 정보 없음"
+                }
+                return data
         else:
-            return False  # 해당 책의 취향 정보가 없음
-
+            data = {
+                "message": "해당 책의 취향 정보가 없음"
+            }
+            return data 
     except Exception as e:
         print(f"Error adding book preferences to user: {str(e)}")
         conn.rollback()
-        return False  # 취향 정보 추가 실패
+        data = {
+            "message": "취향 정보 추가 실패"
+        }
+        return data
 
-
-
-
-
-
-
-
-
-
-"""
-def AddtoBookmark(conn, user_id, book_id):
+## 사용자 북마크 생성 (Insert) ##
+def PostAddBookmark(conn, user_id, book_id):
     try:
-        # 현재 날짜와 시간 정보 가져오기
-        current_time = datetime.datetime.now()
+        if user_id == "":
+            data = {
+                "message": "사용자ID가 입력되지 않았습니다."
+            }
+        elif book_id == "":
+            data = {
+                "message": "책ID가 입력되지 않았습니다."
+            }
+        else:
+            check_query = f"SELECT * FROM BOOKMARK WHERE u_id = %s AND b_id = %s"
+            cursor = conn.cursor()
+            cursor.execute(check_query, (user_id, book_id,))
+            rows = cursor.fetchone()
 
-        # 즐겨찾기 테이블에 사용자와 책 정보 추가
-        query = "INSERT INTO BOOKMARK (u_id, b_id, b_regist) VALUES (%s, %s, %s)"
-        cursor = conn.cursor()
-        cursor.execute(query, (user_id, book_id, current_time))
-        conn.commit()
-
-        return True  # 등록 성공을 나타내는 값 반환
+            if rows: # 이미 Bookmark가 존재할 경우 작업하지 않음
+                data = {
+                    "message": "이미 등록된 북마크"
+                }
+            else: # 등록된 취향정보가 없다면 등록
+                insert_query = f"INSERT INTO BOOKMARK (u_id, b_id, b_regist) VALUES (%s, %s, GETDATE())"
+                cursor = conn.cursor()
+                cursor.execute(insert_query, (user_id, book_id,))
+                conn.commit()
+                data = {
+                    "message": "Success"
+                }
+        return data
     except Exception as e:
         print(f"Error adding to bookmark: {str(e)}")
         conn.rollback()  # 롤백하여 이전 상태로 복구
-        return False  # 등록 실패를 나타내는 값 반환
-"""
+        data = {
+            "message": "북마크 등록 실패"
+        }
+        return data
+
+## 사용자 북마크 삭제 (Delete) ##
+def DeleteBookmark(conn, user_id, book_id):
+    try:
+        if user_id == "":
+            data = {
+                "message": "사용자ID가 입력되지 않았습니다."
+            }
+        elif book_id == "":
+            data = {
+                "message": "책ID가 입력되지 않았습니다."
+            }
+        else:
+            check_query = f"SELECT * FROM BOOKMARK WHERE u_id = %s AND b_id = %s"
+            cursor = conn.cursor()
+            cursor.execute(check_query, (user_id, book_id,))
+            rows = cursor.fetchone()
+
+            if rows: # 이미 Bookmark가 존재할 경우 삭제
+                delete_query = f"DELETE BOOKMARK WHERE u_id = %s AND b_id = %s"
+                cursor = conn.cursor()
+                cursor.execute(delete_query, (user_id, book_id,))
+                conn.commit()
+                data = {
+                    "message": "Success"
+                }
+            else: # Bookmark가 존재하지 않으면 Pass
+                data = {
+                    "message": "존재하지 않는 북마크"
+                }
+        return data
+    except Exception as e:
+        print(f"Error delete to bookmark: {str(e)}")
+        conn.rollback()  # 롤백하여 이전 상태로 복구
+        data = {
+            "message": "북마크 삭제 실패"
+        }
+        return data
+
+## 사용자 북마크 목록 추출 ##
+def GetUserBookmarkList(conn, user_id):
+    if user_id == "":
+        data = {
+            "message": "사용자ID가 입력되지 않았습니다."
+        }
+        return data
+    else:
+        query = f'''SELECT bm.u_id, bm.b_id, bm.b_regist, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img FROM BOOKMARK AS bm, BOOK_INFO AS bi
+                    WHERE bm.b_id = bi.b_id AND u_id = %s
+                 '''
+        try:
+            cursor = conn.cursor(as_dict=True)
+            cursor.execute(query, (user_id,))
+            rows = cursor.fetchall()
+            user_bookmarks = []
+
+            if rows:  # 사용자 북마크가 존재하면?
+                for row in rows:
+                    user_bookmark = {
+                        "b_id": row['b_id'],
+                        "b_regist": row['b_regist'],
+                        "u_id": row['u_id'].encode('ISO-8859-1').decode('cp949'),
+                        "b_name": row['b_name'].encode('ISO-8859-1').decode('cp949'),
+                        "b_aut": row['b_aut'].encode('ISO-8859-1').decode('cp949'),
+                        "b_ps": row['b_ps'].encode('ISO-8859-1').decode('cp949'),
+                        "b_date": row['b_date'],
+                        "b_short": row['b_short'].encode('ISO-8859-1').decode('cp949'),
+                        "b_detail": row['b_detail'].encode('ISO-8859-1').decode('cp949'),
+                        "b_img": row['b_img'].encode('ISO-8859-1').decode('cp949')
+                    }
+                    user_bookmarks.append(user_bookmark)
+            return user_bookmark
+        except Exception as e:
+            print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
+            return None
+
+
+# DELETE
+# POST
+
 def GetUserBookmarksWithPreferences(conn, user_id):
     try:
         query = """
@@ -283,19 +406,6 @@ def GetUserBookmarksWithPreferences(conn, user_id):
     except Exception as e:
         print(f"Error getting user bookmarks with preferences: {str(e)}")
         return None
-
-
-def RemoveFromBookmark(conn, user_id, book_id):
-    try:
-        query = "DELETE FROM BOOKMARK WHERE u_id = %s AND b_id = %s"
-        cursor = conn.cursor()
-        cursor.execute(query, (user_id, book_id))
-        conn.commit()
-        return True  # 삭제 성공을 나타내는 값 반환
-    except Exception as e:
-        print(f"Error removing from bookmark: {str(e)}")
-        conn.rollback()  # 롤백하여 이전 상태로 복구
-        return False  # 삭제 실패를 나타내는 값 반환
 
 def RecommendBooksWithPreferences(conn, user_id):
     try:
@@ -360,7 +470,6 @@ def RecommendBooksWithPreferences(conn, user_id):
         print(f"Error recommending books with preferences: {str(e)}")
         return None
 
-
 def AddBookToUserBookmark(conn, user_id, book_id):
     try:
         # 해당 사용자의 책 즐겨찾기에 추가된 도서인지 확인
@@ -407,7 +516,8 @@ def AddBookToUserBookmark(conn, user_id, book_id):
         print(f"Error adding book to user bookmark and preferences: {str(e)}")
         conn.rollback()
         return False  # 즐겨찾기 및 취향 정보 추가 실패
-    
+
+"""
 def execute_query1(conn):
     query = "SELECT * FROM table1"
     try:
@@ -418,7 +528,6 @@ def execute_query1(conn):
     except Exception as e:
         print(f"Error executing SQL query 1: {str(e)}")
         return None
-
 
 ## USER_INFO 가져오기
 def SelectUserInfo(conn, u_id):
@@ -436,8 +545,6 @@ def SelectUserInfo(conn, u_id):
         print(u_id, u_pwd, u_name, u_nicname, u_division, u_gender, u_age, u_time)
         row = cursor.fetchone()
 
-
-
 ## SELECT
 def DBSelect(sql):
     global conn, cursor
@@ -447,38 +554,6 @@ def DBSelect(sql):
         print(row['u_id'], row['u_name'].encode('ISO-8859-1').decode('cp949'))
         row = cursor.fetchone()
 
-"""
-def GetUserLoginCheck(conn, u_id, u_pwd):
-    query = 'SELECT COUNT(*) AS CNT FROM USER_INFO WHERE u_id = %s AND u_pwd = %s'
-    try:
-        # 딕셔너리로 결과 반환하는 커서 생성
-        cursor = conn.cursor(as_dict=True)
-        cursor.execute(query, (u_id, u_pwd))
-        row = cursor.fetchone()
-        count_value = row['CNT']
-        if count_value == 1:
-            data = {
-                "login_yn":"y",
-                "message":"로그인 성공"
-            }
-            print(data)
-        else:
-            data = {
-                "login_yn":"n",
-                "message":"실패 : 아이디가 존재하지 않거나 비밀번호가 일치하지 않습니다."
-            }
-        return data
-    except Exception as e:
-        print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
-        return None
-#print(UserLoginCheck('', '1', '비밀번호'))
-#UserLoginCheck('', '1', ' 비밀번호')
-#SelectUserInfo('','','','','','','','')
-#DBConnect(server, username, password, database)
-#DBSelect(sql)
-#DBClose()
-"""
-"""
 #############################################################################
 # INSERT
 data = 'hello World !!'

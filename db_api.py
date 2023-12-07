@@ -34,12 +34,7 @@ def random_char():
         "key":val_random_number,
         "value":list_char[val_random_number - 1]
     }
-    #print(json_object)
-    #json_string = json.dumps(json_object)
-    #print(json_string)
-
     return json_object
-
 
 ## 로그인 및 계정정보 추출 ##
 @api.get('/GetUserLoginCheck')
@@ -81,8 +76,7 @@ def PostUserPreferences(user_id: str, preference_ids: str):
         result_json = DBConnect.PostUserPreferences(conn, user_id, preference_ids)
     return result_json
 
-
-
+## 책의 취향정보를 가져와서, 사용자 취향 정보에 추가 ##
 @api.get('/AddBookToUserPreferences')
 def AddBookToUserPreferences(user_id: str, book_id: str):
     conn = DBConnect.DBConnect()
@@ -90,12 +84,27 @@ def AddBookToUserPreferences(user_id: str, book_id: str):
         result_json = DBConnect.AddBookToUserPreferences(conn, user_id, book_id)
     return result_json
 
-"""
-## User 취향정보 입력(Insert)
-@api.post("/PostUserPreferences")
-def PostUserPreferences(id: str, preference_ids: str):
-        conn = DBConnect.DBConnect()
-        if conn:
-            result_json = DBConnect.PostUserPreferences(conn, id, preference_ids)
-        return result_json
-"""
+## 사용자 북마크 생성 (Insert) ##
+@api.get('/PostAddBookmark')
+def PostAddBookmark(user_id: str, book_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.PostAddBookmark(conn, user_id, book_id)
+    return result_json
+
+## 사용자 북마크 삭제 (Delete) ##
+@api.get('/DeleteBookmark')
+def DeleteBookmark(user_id: str, book_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.DeleteBookmark(conn, user_id, book_id)
+    return result_json
+
+## 사용자 북마크 목록 추출 (SELECT) ##
+@api.get('/GetUserBookmarkList')
+def GetUserBookmarkList(user_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.GetUserBookmarkList(conn, user_id)
+    return result_json
+
