@@ -1,7 +1,7 @@
 import pymssql
 import json
 import random
-
+import numpy as np
 #     print(row[0], row[1].encode('ISO-8859-1').decode('euc-kr'))
 #     print(row[0], row[1].encode('ISO-8859-1').decode('cp949'))
 
@@ -17,8 +17,8 @@ import random
 
 ## MSSQL 접속
 def DBConnect():
-    server = '172.16.104.69:1433'       # 김진영 부천대 Local
-    #server = '192.168.45.216:1433'     # 김진영 HOME Local
+    #server = '172.16.104.69:1433'       # 김진영 부천대 Local
+    server = '192.168.45.172:1433'     # 김진영 HOME Local
     #server = '222.108.212.104:1433'
     #server = '172.16.114.196:1433'     # 이세호 부천대 Local
     #server = '192.168.219.104:1433'    # 도성대 HOME Local
@@ -75,7 +75,7 @@ def GetUserLoginCheck(conn, u_id, u_pwd):
 def GetBookSearch(conn, book_name):
     book_name = '%' + book_name + '%'  # 부분 일치하는 문자열을 만듬
     query = f'''SELECT b_id, b_name, b_aut, b_ps, b_date, b_short, b_detail, b_img,
-		        ISNULL(STUFF((SELECT ',' + pi.p_name FROM BOOK_PREFERENCE bp JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id WHERE bi.b_id = bp.b_id FOR XML PATH('')), 1, 2, ''), '') AS p_names
+		        ISNULL(STUFF((SELECT ',' + pi.p_name FROM BOOK_PREFERENCE bp JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id WHERE bi.b_id = bp.b_id FOR XML PATH('')), 1, 1, ''), '') AS p_names
                 FROM BOOK_INFO bi
                 WHERE b_name LIKE %s
             '''
@@ -109,7 +109,7 @@ def GetBookSearch(conn, book_name):
         print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
         return None
 
-## 취향명으로 취향목록 추출 ##
+## 취향명으로 취향목록 추출 (랜덤) ##  *** 전체조회도 가능 
 def GetPreferencesNameList(conn, preference_name, like_option):
     if like_option == True:
         preference_name = '%' + preference_name + '%'  # 부분 일치하는 문자열을 만듬
@@ -130,6 +130,9 @@ def GetPreferencesNameList(conn, preference_name, like_option):
                     "p_name": row['p_name'].encode('ISO-8859-1').decode('cp949')
                 }
                 preferences.append(preference)
+                np.random.shuffle(preferences)                                  # 랜덤으로 정렬 - numpy 모듈 설치 필요
+                #random.shuffle(preferences)                                    # 랜덤으로 정렬 - 너무 느림
+                #preferences = random.sample(preferences, len(preferences))     # 랜덤으로 정렬 - 더 느림
             return preferences
         else:  # 취향정보가 없다면
             data = {
@@ -326,7 +329,7 @@ def DeleteBookmark(conn, user_id, book_id):
         }
         return data
 
-## 사용자 북마크 목록 추출 ##
+## 사용자 북마크 목록 추출 (취향을 포함하여 반환) ##
 def GetUserBookmarkList(conn, user_id):
     if user_id == "":
         data = {
@@ -334,7 +337,9 @@ def GetUserBookmarkList(conn, user_id):
         }
         return data
     else:
-        query = f'''SELECT bm.u_id, bm.b_id, bm.b_regist, bi.b_name, bi.b_aut, bi.b_ps, bi.b_date, bi.b_short, bi.b_detail, bi.b_img FROM BOOKMARK AS bm, BOOK_INFO AS bi
+        query = f'''SELECT bm.u_id, bm.b_id, bm.b_regist, b_name, b_aut, b_ps, b_date, b_short, b_detail, b_img,
+                    ISNULL(STUFF((SELECT ',' + pi.p_name FROM BOOK_PREFERENCE bp JOIN PREFERENCE_INFO pi ON bp.p_id = pi.p_id WHERE bi.b_id = bp.b_id FOR XML PATH('')), 1, 1, ''), '') AS p_names
+                    FROM BOOKMARK AS bm, BOOK_INFO AS bi
                     WHERE bm.b_id = bi.b_id AND u_id = %s
                  '''
         try:
@@ -355,7 +360,8 @@ def GetUserBookmarkList(conn, user_id):
                         "b_date": row['b_date'],
                         "b_short": row['b_short'].encode('ISO-8859-1').decode('cp949'),
                         "b_detail": row['b_detail'].encode('ISO-8859-1').decode('cp949'),
-                        "b_img": row['b_img'].encode('ISO-8859-1').decode('cp949')
+                        "b_img": row['b_img'].encode('ISO-8859-1').decode('cp949'),
+                        "p_names": row['p_names']
                     }
                     user_bookmarks.append(user_bookmark)
             return user_bookmarks
@@ -371,6 +377,7 @@ def GetUserBookmarkList(conn, user_id):
 
 
 ###################
+'''
 def RecommendBooksWithPreferences(conn, user_id):
     try:
         query = """
@@ -480,3 +487,4 @@ def AddBookToUserBookmark(conn, user_id, book_id):
         print(f"Error adding book to user bookmark and preferences: {str(e)}")
         conn.rollback()
         return False  # 즐겨찾기 및 취향 정보 추가 실패
+'''

@@ -52,7 +52,7 @@ def GetBookSearch(book_name: str):
         result_json = DBConnect.GetBookSearch(conn, book_name)
     return result_json
 
-## 취향명으로 취향리스트 추출 ##
+## 취향명으로 취향리스트 추출(랜덤) ##
 @api.get('/GetPreferencesNameList')
 def GetPreferencesNameList(preference_name: str, like_option: bool):
     conn = DBConnect.DBConnect()
@@ -100,7 +100,7 @@ def DeleteBookmark(user_id: str, book_id: str):
         result_json = DBConnect.DeleteBookmark(conn, user_id, book_id)
     return result_json
 
-## 사용자 북마크 목록 추출 (SELECT) ##
+## 사용자 북마크 목록 추출 (취향을 포함하여 반환) (SELECT) ##
 @api.get('/GetUserBookmarkList')
 def GetUserBookmarkList(user_id: str):
     conn = DBConnect.DBConnect()
