@@ -358,7 +358,7 @@ def GetUserBookmarkList(conn, user_id):
                         "b_img": row['b_img'].encode('ISO-8859-1').decode('cp949')
                     }
                     user_bookmarks.append(user_bookmark)
-            return user_bookmark
+            return user_bookmarks
         except Exception as e:
             print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
             return None
