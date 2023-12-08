@@ -385,7 +385,7 @@ def PostUpdateUserInfo(conn, user_id, user_nickname, user_gender, user_age, user
             data = {
                 "message": "사용자 성별이 입력되지 않았습니다."
             }
-        elif user_age == "" or not str(user_age).isdigit():
+        elif user_age == "" or not not user_age.isdigit():
             data = {
                 "message": "사용자 나이가 올바르게 입력되지 않았습니다."
             }
