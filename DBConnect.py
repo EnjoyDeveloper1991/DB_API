@@ -18,9 +18,10 @@ import numpy as np
 ## MSSQL 접속
 def DBConnect():
     #server = '172.16.104.69:1433'       # 김진영 부천대 Local
-    server = '192.168.45.172:1433'     # 김진영 HOME Local
+    #server = '192.168.45.172:1433'     # 김진영 HOME Local
     #server = '222.108.212.104:1433'
     #server = '172.16.114.196:1433'     # 이세호 부천대 Local
+    server = '172.30.1.100:1433'        #이세호 HOME Local
     #server = '192.168.219.104:1433'    # 도성대 HOME Local
     database = 'dnb'
     username = 'sa'
@@ -368,6 +369,60 @@ def GetUserBookmarkList(conn, user_id):
         except Exception as e:
             print(f"MSSQL 쿼리 실행 중 오류 발생 {str(e)}")
             return None
+
+## 사용자 개인정보 생성 (Insert) ##
+def PostUpdateUserInfo(conn, user_id, user_nickname, user_gender, user_age, user_time):
+    try:
+        if user_id == "":
+            data = {
+                "message": "사용자ID가 입력되지 않았습니다."
+            }
+        elif user_nickname == "":
+            data = {
+                "message": "사용자 닉네임이 입력되지 않았습니다."
+            }
+        elif user_gender == "":
+            data = {
+                "message": "사용자 성별이 입력되지 않았습니다."
+            }
+        elif user_age == "" or not not user_age.isdigit():
+            data = {
+                "message": "사용자 나이가 올바르게 입력되지 않았습니다."
+            }
+        elif user_time == "":
+            data = {
+                "message": "사용자 시간이 입력되지 않았습니다."
+            }
+        else:
+            check_query = f"SELECT * FROM USER_INFO WHERE u_id = %s"
+            cursor = conn.cursor()
+            cursor.execute(check_query, (user_id,))
+            rows = cursor.fetchone()
+            
+            # update_query = f"UPDATE USER_INFO SET u_nickname = ?, u_gender = ?, u_age = ?, u_time = ? WHERE u_id = ?"
+            # cursor.execute(update_query, (user_nickname, user_gender, user_age, user_time, user_id,))
+            if rows: # 이미 사용자 정보가 존재할 경우, 정보를 업데이트
+                update_query = f"UPDATE USER_INFO SET u_nickname = %s, u_gender = %s, u_age = %s, u_time = %s WHERE u_id = %s"
+                cursor = conn.cursor()
+                cursor.execute(update_query, (user_nickname, user_gender, int(user_age), user_time, user_id,))
+                conn.commit()
+                data = {
+                    "message": "Success"
+                }
+            else: # 등록된 사용자 정보가 없다면, 오류 메시지 반환
+                data = {
+                    "message": "등록된 사용자 정보가 없습니다."
+                }
+        return data
+    except Exception as e:
+        print(f"Error updating user info: {str(e)}")
+        conn.rollback()  # 롤백하여 이전 상태로 복구
+        data = {
+            "message": "사용자 정보 업데이트 실패"
+        }
+        return data
+    
+
 
 
 

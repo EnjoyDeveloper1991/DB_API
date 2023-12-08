@@ -108,3 +108,10 @@ def GetUserBookmarkList(user_id: str):
         result_json = DBConnect.GetUserBookmarkList(conn, user_id)
     return result_json
 
+#사용자 정보입력
+@api.get('/PostUpdateUserInfo')
+def PostUpdateUserInfo(user_nickname: str, user_gender: str, user_age: int, user_time: str, user_id: str):
+    conn = DBConnect.DBConnect()
+    if conn:
+        result_json = DBConnect.PostUpdateUserInfo(conn, user_nickname, user_gender, user_age, user_time, user_id)
+    return result_json
