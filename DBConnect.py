@@ -22,7 +22,7 @@ def DBConnect():
     #server = '192.168.45.172:1433'     # 김진영 HOME Local
     #server = '222.108.212.104:1433'
     #server = '172.16.114.196:1433'     # 이세호 부천대 Local
-    server = '172.30.1.100:1433'        #이세호 HOME Local
+    server = '172.30.1.72:1433'        #이세호 HOME Local
     #server = '192.168.219.104:1433'    # 도성대 HOME Local
     database = 'dnb'
     username = 'sa'
